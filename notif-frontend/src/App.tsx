@@ -5,7 +5,7 @@ import Dashboard from "./pages/Dashboard";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter> 
       <Routes>
         <Route path="/" element={<Signup />} />
         <Route path="/login" element={<Login />} />
