@@ -1,23 +1,29 @@
 import { useState } from "react";
 import api from "../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const [form, setForm] = useState({ usernameOrEmail: "", password: "" });
   const navigate = useNavigate();
+  const { login } = useAuth();
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    const res = await api.post("/api/auth/login", form);
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("email", form.usernameOrEmail); // ✅ store email
-    navigate("/dashboard");
-  } catch (err: any) {
-    alert(err.response?.data?.message || "Login failed");
-  }
-};
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await api.post("/api/auth/login", form);
 
+      // Store globally
+      login(res.data.token, {
+        username: res.data.user?.username || "",
+        email: form.usernameOrEmail,
+      });
+
+      navigate("/dashboard");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Login failed");
+    }
+  };
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
@@ -32,7 +38,9 @@ export default function Login() {
           placeholder="Email"
           autoComplete="off"
           className="w-full border p-2 mb-3"
-          onChange={(e) => setForm({ ...form, usernameOrEmail: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, usernameOrEmail: e.target.value })
+          }
         />
 
         <input
@@ -52,7 +60,7 @@ export default function Login() {
 
         <p
           className="text-sm mt-3 text-center text-blue-600 cursor-pointer"
-          onClick={() => navigate("/signup")}
+          onClick={() => navigate("/")}
         >
           Don’t have an account? Sign up
         </p>

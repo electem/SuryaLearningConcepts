@@ -5,6 +5,8 @@ import { AppDataSource } from "./data-source";
 import authRoutes from "./routes/auth";
 import notifyRoutes from "./routes/notify";
 import { startCron } from "./cron/jobs";
+import { errorHandler } from "./middleware/errorHandler";
+
 
 dotenv.config();
 
@@ -14,6 +16,7 @@ app.use(cors());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/notifications", notifyRoutes);
+app.use(errorHandler);
 
 AppDataSource.initialize()
   .then(() => {

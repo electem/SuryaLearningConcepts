@@ -1,23 +1,28 @@
 import { useState } from "react";
 import api from "../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function Signup() {
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    const res = await api.post("/api/auth/signup", form);
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("email", form.email);
-    navigate("/login");
-  } catch (err: any) {
-    alert(err.response?.data?.message || "Signup failed");
-  }
-};
+    e.preventDefault();
+    try {
+      const res = await api.post("/api/auth/signup", form);
 
+      // Store token & user globally
+      login(res.data.token, { username: form.username, email: form.email });
+      console.log("login data",login);
+      
+
+      navigate("/login");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Signup failed");
+    }
+  };
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">

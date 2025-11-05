@@ -2,19 +2,19 @@ import { Router } from "express";
 import { auth, AuthRequest } from "../middleware/auth";
 import { AppDataSource } from "../data-source";
 import { Notification } from "../entity/Notification";
-import { sendMail } from "../mailer"; // ✅ make sure this exists
+import { sendMail } from "../mailer";
+import { sendSms, sendWhatsApp } from "../twilio";
 
 const router = Router();
 const notifRepo = AppDataSource.getRepository(Notification);
 
 router.post("/create", auth, async (req: AuthRequest, res) => {
   try {
-    const { to, subject, body, sendAt } = req.body;
+    const { to, subject, body, sendAt, smsNumber, whatsAppNumber } = req.body;
 
-    // Create notification record
     const notification = notifRepo.create({
       user: req.user!,
-      to,
+      to: to || smsNumber || whatsAppNumber,
       subject,
       body,
       sendAt: sendAt ? new Date(sendAt) : new Date(),
@@ -22,24 +22,44 @@ router.post("/create", auth, async (req: AuthRequest, res) => {
     });
     await notifRepo.save(notification);
 
-    // 📨 Instant send if sendAt is now or in the past
     const now = new Date();
     if (!sendAt || new Date(sendAt) <= now) {
       try {
-        await sendMail({ to, subject, text: body });
-        notification.sent = true;
-        notification.sentAt = new Date();
-        await notifRepo.save(notification);
-        console.log(`✅ Instant email sent to ${to}`);
+        if (to) {
+          await sendMail({ to, subject, text: body });
+          console.log(`📧 Email sent to ${to}`);
+        }
       } catch (err) {
-        console.error(`❌ Error sending instant email to ${to}:`, err);
+        console.error("❌ Email send failed:", err);
       }
+
+      try {
+        if (smsNumber) {
+          await sendSms({ to: smsNumber, body });
+          console.log(`📱 SMS sent to ${smsNumber}`);
+        }
+      } catch (err) {
+        console.error("❌ SMS send failed:", err);
+      }
+
+      try {
+        if (whatsAppNumber) {
+          await sendWhatsApp({ to: whatsAppNumber, body });
+          console.log(`💬 WhatsApp sent to ${whatsAppNumber}`);
+        }
+      } catch (err) {
+        console.error("❌ WhatsApp send failed:", err);
+      }
+
+      notification.sent = true;
+      notification.sentAt = new Date();
+      await notifRepo.save(notification);
     }
 
-    res.json({ notification });
+    res.json({ success: true, notification });
   } catch (err) {
-    console.error("❌ Error creating notification:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ Error creating notification (outer):", err);
+    res.status(500).json({ error: "Server error", details: (err as Error).message });
   }
 });
 
@@ -57,4 +77,3 @@ router.get("/", auth, async (req: AuthRequest, res) => {
 });
 
 export default router;
-
