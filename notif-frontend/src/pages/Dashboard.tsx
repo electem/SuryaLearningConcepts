@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(""); 
 
  const sendNotification = async (type: "email" | "sms" | "whatsapp") => {
   try {
