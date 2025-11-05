@@ -14,7 +14,7 @@ export async function sendSms({ to, body }: { to: string; body: string }) {
   });
 }
 
-export async function sendWhatsApp({ to, body }: { to: string; body: string }) {
+export async function sendWhatsApp({ to, body }: { to: string; body: string }) { 
   // Twilio WhatsApp format requires "whatsapp:+<number>"
   const toWithPrefix = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
   return client.messages.create({

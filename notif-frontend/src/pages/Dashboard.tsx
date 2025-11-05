@@ -11,9 +11,9 @@ export default function Dashboard() {
     const payload: any = {
       subject: "Test Notification",
       body: `Hi! This is your ${type.toUpperCase()} test message.`,
-    };
+    };  
 
-    if (type === "email") {
+    if (type === "email") { 
       if (!user?.email) {
         alert("⚠️ No email found!");
         return;
