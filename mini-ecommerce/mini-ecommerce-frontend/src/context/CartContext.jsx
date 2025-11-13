@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useEffect } from "react";
 import api from "../api/axios";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
@@ -43,12 +44,15 @@ function cartReducer(state, action) {
 
 export const CartProvider = ({ children }) => {
   const [cart, dispatch] = useReducer(cartReducer, initialState);
+  const { user, loading } = useAuth(); // ✅ get user from AuthContext
 
-  // 🧠 Load user's cart from backend once on app start
   useEffect(() => {
+    if (loading) return; // wait until auth finishes
+    if (!user) return; // no user, do not fetch cart
+
     const fetchCart = async () => {
       try {
-        const res = await api.get("/cart");
+        const res = await api.get("/cart"); // token will be added automatically
         if (res.data?.items) {
           dispatch({ type: "SET_CART", payload: res.data.items });
         }
@@ -57,7 +61,7 @@ export const CartProvider = ({ children }) => {
       }
     };
     fetchCart();
-  }, []);
+  }, [user, loading]); // ✅ run when user changes
 
   return (
     <CartContext.Provider value={{ cart, dispatch }}>

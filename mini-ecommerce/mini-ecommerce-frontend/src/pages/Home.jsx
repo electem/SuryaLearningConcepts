@@ -47,7 +47,7 @@ export default function Home() {
       });
 
       // Save to backend
-      const res = await api.post(
+      await api.post(
         "/cart/add",
         {
           userId,
@@ -71,6 +71,16 @@ export default function Home() {
 
   return (
     <div className="p-4">
+      {/* Cart Button */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => navigate("/cart")}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2"
+        >
+          🛒 Cart
+        </button>
+      </div>
+
       {/* Search & Sort */}
       <div className="flex gap-2 mb-4">
         <input

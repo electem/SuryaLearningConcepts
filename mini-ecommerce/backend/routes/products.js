@@ -1,20 +1,21 @@
 import express from "express";
 import Product from "../models/Product.js";
 import { authMiddleware, roleMiddleware } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/upload.js";
 
 const router = express.Router();
 
-// Get all products (user)
-// GET /products?search=shirt&sort=price_asc&page=1&limit=9
+// ================================
+// GET all products (user & owner)
+// ================================
 router.get("/", async (req, res) => {
   try {
     let { search, sort, page, limit } = req.query;
 
-    page = parseInt(page) || 1; // default page 1
-    limit = parseInt(limit) || 9; // default 9 items per page
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 9;
     const skip = (page - 1) * limit;
 
-    // Search by name or description
     const searchQuery = search
       ? {
           $or: [
@@ -24,7 +25,6 @@ router.get("/", async (req, res) => {
         }
       : {};
 
-    // Sorting
     let sortQuery = {};
     if (sort === "price_asc") sortQuery.price = 1;
     else if (sort === "price_desc") sortQuery.price = -1;
@@ -48,27 +48,55 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Owner: Add product
-router.post("/", authMiddleware, roleMiddleware(["owner"]), async (req, res) => {
-  try {
-    const product = await Product.create(req.body);
-    res.json(product);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// ================================
+// POST a new product (owner only)
+// ================================
+router.post(
+  "/",
+  authMiddleware,
+  roleMiddleware(["owner"]),
+  upload.single("image"), // handle image upload
+  async (req, res) => {
+    try {
+      const { name, price, category, description } = req.body;
+      const image = req.file ? `/uploads/${req.file.filename}` : "";
 
-// Owner: Update product
-router.put("/:id", authMiddleware, roleMiddleware(["owner"]), async (req, res) => {
-  try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(product);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+      const product = await Product.create({ name, price, category, description, image });
+      res.status(201).json(product);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
-});
+);
 
-// Owner: Delete product
+// ================================
+// PUT /:id - update product (owner only)
+// ================================
+router.put(
+  "/:id",
+  authMiddleware,
+  roleMiddleware(["owner"]),
+  upload.single("image"), // allow updating image as well
+  async (req, res) => {
+    try {
+      const { name, price, category, description } = req.body;
+      const updateData = { name, price, category, description };
+
+      if (req.file) {
+        updateData.image = `/uploads/${req.file.filename}`;
+      }
+
+      const product = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true });
+      res.json(product);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+// ================================
+// DELETE /:id - delete product (owner only)
+// ================================
 router.delete("/:id", authMiddleware, roleMiddleware(["owner"]), async (req, res) => {
   try {
     await Product.findByIdAndDelete(req.params.id);

@@ -31,26 +31,38 @@ export default function Login() {
   };
 
   // ✅ Verify OTP
-  const verifyOtp = async () => {
-    if (!code.trim()) {
-      alert("Please enter the OTP you received.");
-      return;
+ const verifyOtp = async () => {
+  if (!code.trim()) {
+    alert("Please enter the OTP you received.");
+    return;
+  }
+  try {
+    setLoading(true);
+    const res = await api.post("/auth/verify-otp", { phone, code });
+
+    // Save token and user info
+    loginWithToken(res.data.token);
+    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("userId", res.data.user._id);
+    localStorage.setItem("role", res.data.user.role); // save role if needed
+
+    alert("Login successful!");
+
+    // ✅ Redirect based on role
+    if (res.data.user.role === "owner") {
+      navigate("/owner"); // Owner dashboard
+    } else {
+      navigate("/home"); // Regular user
     }
-    try {
-      setLoading(true);
-      const res = await api.post("/auth/verify-otp", { phone, code });
-      loginWithToken(res.data.token);
-      alert("Login successful!");
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userId", res.data.user._id);
-      navigate("/home"); // 👈 Redirect to home after success
-    } catch (err) {
-      alert("Invalid OTP or expired code.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+  } catch (err) {
+    alert("Invalid OTP or expired code.");
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="max-w-md mx-auto p-4 text-center">
