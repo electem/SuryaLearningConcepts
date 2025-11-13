@@ -30,13 +30,17 @@ router.get("/", authMiddleware, roleMiddleware(["user"]), async (req, res) => {
 });
 
 // Owner: Get all orders
+// Owner: Get all orders
 router.get("/all", authMiddleware, roleMiddleware(["owner"]), async (req, res) => {
   try {
-    const orders = await Order.find().populate("userId", "phone");
+    const orders = await Order.find()
+      .populate("userId", "name phone")
+      .sort({ createdAt: -1 }); // latest orders first
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 export default router;

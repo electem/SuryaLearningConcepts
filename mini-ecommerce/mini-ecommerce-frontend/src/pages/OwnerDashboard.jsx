@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import { useNavigate } from "react-router-dom";
+
 
 export default function OwnerDashboard() {
   const [products, setProducts] = useState([]);
@@ -112,6 +114,12 @@ export default function OwnerDashboard() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Owner Dashboard</h1>
+       <button
+    onClick={() => navigate("/owner/orders")}
+    className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+  >
+    View Orders
+  </button>
 
       {/* Search & Sort */}
       <div className="flex gap-2 mb-4">
