@@ -4,7 +4,7 @@ import Cart from "../models/Cart.js";
 const router = express.Router();
 
 // 🛒 Get cart by userId (pass userId as query param or "guest")
-router.get("/", async (req, res) => {
+router.get("/", async (req, res) => {  
   try {
     const userId = req.query.userId || "guest"; // fallback to guest
     let cart = await Cart.findOne({ userId });
