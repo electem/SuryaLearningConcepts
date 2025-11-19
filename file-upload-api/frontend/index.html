@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drag & Drop File Upload with Remove</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    #dropZone {
+      width: 100%;
+      max-width: 500px;
+      padding: 40px;
+      border: 3px dashed #888;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    #dropZone.hover { border-color: #333; background-color: #f0f0f0; }
+
+    #fileContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .file-item {
+      position: relative;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      word-wrap: break-word;
+    }
+
+    .file-item img {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      margin-bottom: 5px;
+      cursor: pointer;
+    }
+
+    .file-item iframe {
+      width: 100%;
+      height: 200px;
+      cursor: pointer;
+    }
+
+    a { display: block; margin-top: 5px; color: blue; text-decoration: underline; }
+
+    /* Cross button style */
+    .remove-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-weight: bold;
+      line-height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Upload Your File Here</h1>
+
+  <div id="dropZone">Drag & Drop Files Here or Click to Select</div>
+  <input type="file" id="fileInput" name="files" multiple style="display:none" />
+
+  <p id="status"></p>
+  <div id="fileContainer"></div>
+
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('status');
+    const fileContainer = document.getElementById('fileContainer');
+
+    // Click drop zone to open file selector
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // Highlight drop zone on drag over
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('hover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+
+    // Handle dropped files
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('hover');
+      const files = e.dataTransfer.files;
+      if (files.length) uploadFiles(files);
+    });
+
+    // Handle file input change
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) uploadFiles(fileInput.files);
+    });
+
+    // Helper function to download file
+    const downloadFile = (url) => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = url.split('/').pop();
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+
+    // Upload function
+    async function uploadFiles(files) {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      status.textContent = "Uploading...";
+
+      try {
+        const res = await fetch('http://localhost:4000/upload-multiple', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          status.textContent = "Upload successful!";
+
+          data.urls.forEach(url => {
+            const fileDiv = document.createElement('div');
+            fileDiv.className = "file-item";
+
+            // Remove button
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = "×";
+            removeBtn.className = "remove-btn";
+            removeBtn.addEventListener('click', () => fileDiv.remove());
+            fileDiv.appendChild(removeBtn);
+
+            // Display file
+            if (url.match(/\.(jpeg|jpg|png)$/i)) {
+              const img = document.createElement('img');
+              img.src = url;
+              img.title = 'Click to download';
+              img.addEventListener('click', () => downloadFile(url));
+              fileDiv.appendChild(img);
+            } else if (url.match(/\.pdf$/i)) {
+              const iframe = document.createElement('iframe');
+              iframe.src = url;
+              iframe.title = 'Click to download';
+              iframe.addEventListener('click', () => downloadFile(url));
+              fileDiv.appendChild(iframe);
+            } else {
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = url.split('/').pop();
+              link.textContent = url.split('/').pop();
+              fileDiv.appendChild(link);
+            }
+
+            fileContainer.appendChild(fileDiv);
+          });
+        } else {
+          status.textContent = `Error: ${data.message}`;
+        }
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
