@@ -1,0 +1,51 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+.env.* 
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build / Dist
+dist/
+build/
+tmp/
+temp/
+
+# Coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# TypeScript output
+*.tsbuildinfo
+
+# PM2 logs & configs
+.pids
+*.pid
+*.seed
+*.pid.lock
+
+# Local database files (if using SQLite or lowdb)
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# Prisma
+prisma/migrations/*-dev/
