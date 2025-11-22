@@ -1,41 +1,104 @@
-const express = require('express');
-const axios = require('axios');
+const express = require("express");
 const router = express.Router();
+const Movie = require("../models/Movie");
+const { protect, authorizeRoles } = require("../middleware/auth");
+const axios = require("axios");
 
-// Base URL for JSON Fakery movies
-const JSON_FAKERY_URL = 'https://jsonfakery.com/movies/paginated';
-
-/**
- * GET /api/movies
- * Query params: page (optional)
- */
-router.get('/', async (req, res) => {
+// Public/User route to GET movies
+router.get("/all", protect, async (req, res) => {
   try {
-    const { page } = req.query;
-    const url = page
-      ? `${JSON_FAKERY_URL}?page=${page}`
-      : JSON_FAKERY_URL;
-
-    const response = await axios.get(url);
-    const data = response.data;
-
-    // Example of what JSON Fakery returns (you should log once to verify)
-    // {
-    //   "current_page": 1,
-    //   "data": [ { movie objects } ],
-    //   "first_page_url": "...",
-    //   "from": 1,
-    //   "last_page": 100,
-    //   "next_page_url": "...",
-    //   "prev_page_url": null,
-    //   ...
-    // }
-
-    // Return the paginated data as is (or you can transform)
-    res.json(data);
+    const movies = await Movie.find().sort({ createdAt: -1 });
+    res.json({ data: movies });
   } catch (err) {
-    console.error('Error fetching movies:', err.message);
-    res.status(500).json({ error: 'Failed to fetch movies' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all movies (Admin)
+router.get("/", protect, authorizeRoles("admin"), async (req, res) => {
+  try {
+    const movies = await Movie.find().sort({ createdAt: -1 });
+    res.json(movies);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST add new movie
+router.post("/", protect, authorizeRoles("admin"), async (req, res) => {
+  try {
+    const { title, overview, poster_path, release_date, vote_average } = req.body;
+
+    // Validate required fields
+    if (!title || !overview || !poster_path || !release_date || vote_average == null) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const movie = new Movie({
+      movie_id: Date.now(), // unique numeric ID
+      title,
+      overview,
+      poster_path,
+      release_date,
+      vote_average,
+      createdBy: req.user._id
+    });
+
+    await movie.save();
+    res.json(movie);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// PUT update movie
+router.put("/:id", protect, authorizeRoles("admin"), async (req, res) => {
+  try {
+    const movie = await Movie.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(movie);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE movie
+router.delete("/:id", protect, authorizeRoles("admin"), async (req, res) => {
+  try {
+    await Movie.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST sync movies from external API
+router.post("/sync", protect, authorizeRoles("admin"), async (req, res) => {
+  try {
+    const page = req.body.page || 1;
+    const response = await axios.get(`https://jsonfakery.com/movies/paginated?page=${page}`);
+    const moviesData = response.data.data;
+
+    for (let m of moviesData) {
+      // Map API fields to schema
+      await Movie.findOneAndUpdate(
+        { movie_id: m.movie_id }, 
+        {
+          movie_id: m.movie_id,
+          title: m.original_title,
+          overview: m.overview,
+          poster_path: m.poster_path,
+          release_date: m.release_date,
+          vote_average: m.vote_average,
+          createdBy: req.user._id
+        }, 
+        { upsert: true, new: true }
+      );
+    }
+
+    res.json({ success: true, synced: moviesData.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

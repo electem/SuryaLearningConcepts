@@ -9,12 +9,15 @@ app.use(express.json());
 
 const movieRoutes = require('./routes/movies');
 const bookingRoutes = require('./routes/bookings');
+const authRoutes = require('./routes/auth'); 
+const { protect } = require('./middleware/auth');
 
 // health
 app.get('/health',(req,res)=>res.send("server is running fine"))
 
-app.use('/api/movies', movieRoutes);
-app.use('/api/bookings', bookingRoutes);
+app.use('/api/movies',protect, movieRoutes);
+app.use('/api/bookings',protect, bookingRoutes);
+app.use('/api/auth', authRoutes);
 
 // Connect to MongoDB for bookings
 mongoose.connect(process.env.MONGO_URI, {

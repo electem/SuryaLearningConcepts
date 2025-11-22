@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { axiosAuth } from "../axiosConfig";
 import { API_BASE } from "../api";
 
 export default function BookingList() {
   const [data, setData] = useState([]);
 
-  
   const load = async () => {
-    const res = await axios.get(`${API_BASE}/bookings`);
-    setData(res.data);
+    try {
+      const res = await axiosAuth.get(`${API_BASE}/bookings`);
+      setData(res.data);
+    } catch (err) {
+      console.error(err);
+      alert("Unauthorized! Login again.");
+    }
   };
-  console.log("Booking list",data);
 
   useEffect(() => {
     load();

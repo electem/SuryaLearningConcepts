@@ -1,43 +1,49 @@
 const express = require("express");
 const Booking = require("../models/Booking");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-
+const { protect, authorizeRoles } = require('../middleware/auth');
 const router = express.Router();
 
-
-// ================================
-// GET ALL BOOKINGS
-// ================================
-router.get("/", async (req, res) => {
+// GET bookings
+// - Admin: get all
+// - User: only own
+router.get("/", protect, async (req, res) => {
   try {
-    const bookings = await Booking.find().sort({ createdAt: -1 });
-    res.json(bookings);
+    if (req.user.role === 'admin') {
+      const bookings = await Booking.find().sort({ createdAt: -1 }).populate('user','email name role');
+      return res.json(bookings);
+    } else {
+      const bookings = await Booking.find({ user: req.user._id }).sort({ createdAt: -1 });
+      return res.json(bookings);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-
-// ================================
-// DELETE BOOKING
-// ================================
-router.delete("/:id", async (req, res) => {
+// DELETE booking - admin OR booking owner
+router.delete("/:id", protect, async (req, res) => {
   try {
-    await Booking.findByIdAndDelete(req.params.id);
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    // owner or admin
+    if (req.user.role !== 'admin' && String(booking.user) !== String(req.user._id)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    await booking.remove();
     res.json({ message: "Booking deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-
-// ================================
-// CREATE STRIPE CHECKOUT SESSION
-// ================================
-router.post("/create-checkout-session", async (req, res) => {
+// create-checkout-session stays public (Stripe redirect), but saving booking must record user
+router.post("/create-checkout-session",protect, async (req, res) => {
   try {
     const { name, movieId, movieTitle, tickets, amount } = req.body;
-
+      console.log("Incoming checkout request body:", req.body);
     if (!name || !movieId || !movieTitle || !tickets || !amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -65,11 +71,8 @@ router.post("/create-checkout-session", async (req, res) => {
   }
 });
 
-
-// ================================
-// SAVE BOOKING (FINAL SOLUTION)
-// ================================
-router.post("/save-booking", async (req, res) => {
+// save-booking: require auth so we can attach user
+router.post("/save-booking", protect, async (req, res) => {
   try {
     const {
       name,
@@ -86,9 +89,10 @@ router.post("/save-booking", async (req, res) => {
     }
 
     const booking = await Booking.findOneAndUpdate(
-      { stripeSessionId },                // Find by stripe session
+      { stripeSessionId },               
       {
         $setOnInsert: {
+          user: req.user._id,           // attach user
           name,
           movieId,
           movieTitle,
@@ -99,8 +103,8 @@ router.post("/save-booking", async (req, res) => {
         }
       },
       {
-        new: true,        // return the document
-        upsert: true,     // insert if not exists
+        new: true,
+        upsert: true,
       }
     );
 
@@ -111,6 +115,5 @@ router.post("/save-booking", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 module.exports = router;

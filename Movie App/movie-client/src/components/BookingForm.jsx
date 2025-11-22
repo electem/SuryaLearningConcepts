@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { API_BASE } from "../api";
+import { axiosAuth } from "../axiosConfig";
 
 export default function BookingForm({ movie, onClose }) {
   const [name, setName] = useState("");
@@ -9,6 +9,7 @@ export default function BookingForm({ movie, onClose }) {
 
   const TICKET_PRICE = 100;
   const amount = tickets * TICKET_PRICE;
+   console.log("Movie object received in BookingForm:", movie);
 
   const handlePay = async () => {
     if (!name.trim()) return alert("Enter customer name");
@@ -19,15 +20,16 @@ export default function BookingForm({ movie, onClose }) {
       const bookingPayload = {
         name,
         movieId: movie.movie_id,
-        movieTitle: movie.original_title,
+         movieTitle: movie.title || "Unknown Movie",
         tickets,
         amount,
       };
-
+ console.log("=== FRONTEND: Booking payload ===");
+    console.log(bookingPayload);
       // Save temp booking so we can read after Stripe redirects
       localStorage.setItem("recentBooking", JSON.stringify(bookingPayload));
 
-      const res = await axios.post(
+      const res = await axiosAuth.post(
         `${API_BASE}/bookings/create-checkout-session`,
         bookingPayload
       );
