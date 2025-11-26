@@ -1,22 +1,30 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE } from "../api";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/useAuthStore";
+import { useMovieStore } from "../store/useMovieStore";
 
 export default function AdminDashboard() {
-  const [movies, setMovies] = useState([]);
+  const navigate = useNavigate();
+
+  // Auth info from Zustand
+  const { token, role } = useAuthStore();
+
+  // Movies & actions from Zustand
+  const movies = useMovieStore((s) => s.movies);
+  const adminLoadMovies = useMovieStore((s) => s.adminLoadMovies);
+  const adminSyncMovies = useMovieStore((s) => s.adminSyncMovies);
+  const adminSaveMovie = useMovieStore((s) => s.adminSaveMovie);
+  const adminDeleteMovie = useMovieStore((s) => s.adminDeleteMovie);
+
+  // Form state      
   const [form, setForm] = useState({
     title: "",
     overview: "",
     poster_path: "",
     release_date: "",
-    vote_average: 0
+    vote_average: 0,
   });
   const [editingId, setEditingId] = useState(null);
-
-  const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
 
   // Redirect if not admin
   useEffect(() => {
@@ -25,22 +33,14 @@ export default function AdminDashboard() {
     }
   }, [token, role, navigate]);
 
-  // Auto-sync & load movies
+  // Sync and load movies on mount & periodically
   useEffect(() => {
     if (!token) return;
 
     const syncAndLoad = async () => {
       try {
-        // Sync with external API
-        await axios.post(`${API_BASE}/movies/sync`, { page: 1 }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        // Load movies from DB
-        const res = await axios.get(`${API_BASE}/movies`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setMovies(res.data || []);
+        await adminSyncMovies();
+        await adminLoadMovies();
       } catch (err) {
         console.error(err);
         alert("Failed to sync or load movies");
@@ -48,35 +48,18 @@ export default function AdminDashboard() {
     };
 
     syncAndLoad();
-
-    // Optional: periodic sync every 5 minutes
-    const interval = setInterval(syncAndLoad, 5 * 60 * 1000);
+    const interval = setInterval(syncAndLoad, 5 * 60 * 1000); // every 5 minutes
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, adminLoadMovies, adminSyncMovies]);
 
-  // Add or update movie
-  const saveMovie = async () => {
+  // Save or update movie
+  const handleSaveMovie = async () => {
     if (!form.title.trim()) return alert("Enter title");
 
-    try {
-      if (editingId) {
-        await axios.put(`${API_BASE}/movies/${editingId}`, form, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } else {
-        await axios.post(`${API_BASE}/movies`, form, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-
+    try { 
+      await adminSaveMovie(form, editingId);
       setForm({ title: "", overview: "", poster_path: "", release_date: "", vote_average: 0 });
       setEditingId(null);
-
-      // Reload movies
-      const res = await axios.get(`${API_BASE}/movies`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMovies(res.data || []);
     } catch (err) {
       console.error(err);
       alert("Failed to save movie");
@@ -84,13 +67,10 @@ export default function AdminDashboard() {
   };
 
   // Delete movie
-  const deleteMovie = async (id) => {
+  const handleDeleteMovie = async (id) => {
     if (!window.confirm("Are you sure?")) return;
     try {
-      await axios.delete(`${API_BASE}/movies/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMovies(movies.filter((m) => m._id !== id));
+      await adminDeleteMovie(id);
     } catch (err) {
       console.error(err);
       alert("Failed to delete movie");
@@ -136,7 +116,7 @@ export default function AdminDashboard() {
         />
 
         <button
-          onClick={saveMovie}
+          onClick={handleSaveMovie}
           className="w-full bg-green-600 text-white py-2 rounded"
         >
           {editingId ? "Update Movie" : "Add Movie"}
@@ -177,7 +157,7 @@ export default function AdminDashboard() {
                       overview: m.overview,
                       poster_path: m.poster_path,
                       release_date: m.release_date,
-                      vote_average: m.vote_average
+                      vote_average: m.vote_average,
                     });
                   }}
                 >
@@ -185,7 +165,7 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   className="px-3 py-1 bg-red-600 text-white rounded"
-                  onClick={() => deleteMovie(m._id)}
+                  onClick={() => handleDeleteMovie(m._id)}
                 >
                   Delete
                 </button>

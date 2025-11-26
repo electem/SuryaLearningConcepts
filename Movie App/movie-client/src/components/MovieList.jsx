@@ -1,82 +1,111 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import BookingForm from "./BookingForm";
+import { axiosAuth } from "../axiosConfig";
 import { API_BASE } from "../api";
+import { useAuthStore } from "../store/useAuthStore";
 
 export default function MovieList() {
   const [movies, setMovies] = useState([]);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [order, setOrder] = useState("desc");
   const [selectedMovie, setSelectedMovie] = useState(null);
 
-  const token = localStorage.getItem("token");
-  const userName = localStorage.getItem("name"); // make sure you store user's name on login
+  const userName = useAuthStore((s) => s.name);
+  const token = useAuthStore((s) => s.token);
 
-  // Fetch movies
   const fetchMovies = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/movies/all`, {
-        headers: { Authorization: `Bearer ${token}` },
+      if (!token) return;
+
+      const res = await axiosAuth.get(`${API_BASE}/movies/all`, {
+        params: {
+          search,
+          sortBy,
+          order,
+          page,
+          limit: 20,
+        },
       });
+
       setMovies(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching movies:", err);
+      console.error("Error fetching movies:", err.response?.data || err);
     }
   };
 
   useEffect(() => {
-    if (token) fetchMovies();
-  }, [page, token]);
+    fetchMovies();
+  }, [token, page, search, sortBy, order]);
 
-  // Handle checkout (redirect to Stripe)
-const handleCheckout = async (movie, tickets = 1) => {
-  try {
-    const userName = localStorage.getItem("name");
-    if (!userName) return alert("User name missing");
-    console.log("Selected movie for checkout:", movie);
+  const handleCheckout = async (movie, tickets = 1) => {
+    try {
+      if (!userName) return alert("User name missing");
 
+      if (!movie.movie_id || !movie.original_title) {
+        return alert("Movie data incomplete");
+      }
 
-    if (!movie.movie_id || !movie.original_title) {
-      return alert("Movie data incomplete");
-    }
-
-    const amount = 10 * tickets; // USD per ticket
-
-    // LOG what we are sending
-    console.log("Checkout request payload:", {
-      name: userName,
-      movieId: movie.movie_id,
-      movieTitle: movie.original_title,
-      tickets,
-      amount
-    });
-
-    const res = await axios.post(
-      `${API_BASE}/bookings/create-checkout-session`,
-      {
+      const payload = {
         name: userName,
         movieId: movie.movie_id,
         movieTitle: movie.original_title,
         tickets,
-        amount
-      }
-    );
+        amount: 10 * tickets,
+      };
 
-    console.log("Stripe session response:", res.data);
+      const res = await axiosAuth.post(
+        `${API_BASE}/bookings/create-checkout-session`,
+        payload
+      );
 
-    window.location.href = res.data.url;
-  } catch (err) {
-    console.error("Checkout error:", err.response?.data || err);
-    alert(err.response?.data?.error || "Checkout failed");
-  }
-};
-
-
+      window.location.href = res.data.url;
+    } catch (err) {
+      console.error("Checkout error:", err.response?.data || err);
+      alert(err.response?.data?.error || "Checkout failed");
+    }
+  };
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+
       <h1 className="text-2xl font-bold mb-8 text-center">🎬 Movie Listings</h1>
 
-      {/* Movie Grid */}
+      {/* SEARCH + SORT */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-3">
+        <input
+          type="text"
+          placeholder="Search movies..."
+          value={search}
+          onChange={(e) => {
+            setPage(1);
+            setSearch(e.target.value);
+          }}
+          className="border p-2 rounded w-full"
+        />
+
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="border p-2 rounded"
+        >
+          <option value="createdAt">Newest</option>
+          <option value="title">Title</option>
+          <option value="vote_average">Rating</option>
+          <option value="release_date">Release Date</option>
+        </select>
+
+        <select
+          value={order}
+          onChange={(e) => setOrder(e.target.value)}
+          className="border p-2 rounded"
+        >
+          <option value="desc">⬇ Desc</option>
+          <option value="asc">⬆ Asc</option>
+        </select>
+      </div>
+
       <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
         {movies.map((m) => (
           <div
@@ -97,7 +126,9 @@ const handleCheckout = async (movie, tickets = 1) => {
                 <span className="text-yellow-500 font-semibold">
                   ⭐ {m.vote_average}
                 </span>
-                <span className="text-gray-600 text-sm">📅 {m.release_date}</span>
+                <span className="text-gray-600 text-sm">
+                  📅 {m.release_date}
+                </span>
               </div>
 
               <button
@@ -131,7 +162,6 @@ const handleCheckout = async (movie, tickets = 1) => {
         </button>
       </div>
 
-      {/* Booking Form Modal */}
       {selectedMovie && (
         <BookingForm
           movie={selectedMovie}

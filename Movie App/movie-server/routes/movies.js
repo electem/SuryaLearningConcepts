@@ -4,25 +4,46 @@ const Movie = require("../models/Movie");
 const { protect, authorizeRoles } = require("../middleware/auth");
 const axios = require("axios");
 
-// Public/User route to GET movies
+// GET all movies (user)
 router.get("/all", protect, async (req, res) => {
   try {
-    const movies = await Movie.find().sort({ createdAt: -1 });
+    const { search = "", sortBy = "createdAt", order = "desc", page = 1, limit = 20 } = req.query;
+
+    const query = {
+      title: { $regex: search, $options: "i" }, // case-insensitive search
+    };
+
+    const movies = await Movie.find(query)
+      .sort({ [sortBy]: order === "desc" ? -1 : 1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
     res.json({ data: movies });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET all movies (Admin)
+// GET all movies (admin)
 router.get("/", protect, authorizeRoles("admin"), async (req, res) => {
   try {
-    const movies = await Movie.find().sort({ createdAt: -1 });
+    const { search = "", sortBy = "createdAt", order = "desc", page = 1, limit = 20 } = req.query;
+
+    const query = {
+      title: { $regex: search, $options: "i" },
+    };
+
+    const movies = await Movie.find(query)
+      .sort({ [sortBy]: order === "desc" ? -1 : 1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
     res.json(movies);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // POST add new movie
 router.post("/", protect, authorizeRoles("admin"), async (req, res) => {

@@ -1,37 +1,24 @@
 import React, { useState } from "react";
-import axios from "axios";
-import { API_BASE } from "../api";
+import { useAuthStore } from "../store/useAuthStore";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("user");
-  const [loading, setLoading] = useState(false);
+
+  const login = useAuthStore((s) => s.login);
+  const loading = useAuthStore((s) => s.loading);
+
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      alert("Enter email and password");
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await axios.post(`${API_BASE}/auth/login`, { email, password, role });
-      const { token, role: serverRole } = res.data;
+    const result = await login(email, password, role);
 
-      localStorage.setItem("token", token);
-      localStorage.setItem("role", serverRole);
+    if (!result.success) return alert(result.error);
 
-      setEmail("");
-      setPassword("");
-
-      if (serverRole === "admin") navigate("/admin");
-      else navigate("/home");
-    } catch (err) {
-      alert(err.response?.data?.error || "Invalid login credentials");
-    }
-    setLoading(false);
+    if (result.role === "admin") navigate("/admin");
+    else navigate("/home");
   };
 
   return (
@@ -40,19 +27,17 @@ export default function Login() {
 
       <input
         className="border p-2 w-full mb-3 rounded"
-        placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        autoComplete="off"
+        placeholder="Email"
       />
 
       <input
+        className="border p-2 w-full mb-3 rounded"
         type="password"
-        className="border p-2 w-full mb-4 rounded"
-        placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        autoComplete="off"
+        placeholder="Password"
       />
 
       <select
@@ -65,9 +50,9 @@ export default function Login() {
       </select>
 
       <button
+        className="w-full bg-blue-600 text-white py-2 rounded"
         onClick={handleLogin}
         disabled={loading}
-        className="w-full bg-blue-600 text-white py-2 rounded"
       >
         {loading ? "Logging in..." : "Login"}
       </button>
