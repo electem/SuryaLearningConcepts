@@ -1,0 +1,121 @@
+{
+  "name": "n8n-meny-to-meny",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enroll-student",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -384,
+        -16
+      ],
+      "id": "2a355e2c-8739-4950-8c75-082280853cdc",
+      "name": "Webhook",
+      "webhookId": "0d6e9b12-794c-4ccc-bf24-ef6d7d1d1062"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO enrollments (student_id, course_id, enrolled_at)\nVALUES ($1, $2, NOW())\nON CONFLICT (student_id, course_id) DO UPDATE SET enrolled_at = NOW()\nRETURNING *;",
+        "options": {
+          "queryReplacement": "=[\"{{ $json.student_id }}\", \"{{ $json.course_id }}\"]"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        32,
+        -16
+      ],
+      "id": "c16e12da-d2e1-44f0-90c3-3d6afa1a57ac",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sid = $input.first().json.body.student_id;\nconst ids = $input.first().json.body.course_ids;\nreturn ids.map(cid => ({\n  json: {\n    student_id: sid,\n    course_id: cid\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -16
+      ],
+      "id": "2b78bd01-426f-4894-a2b6-88b48e62df4b",
+      "name": "Explode course_ids"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ success: true, data: $json }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        -16
+      ],
+      "id": "895f1dca-d1ef-4ccf-8580-a3a3335f81c3",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Explode course_ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explode course_ids": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e66e2cde-6cc3-495d-b47c-971451aca27e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49e166b41ceeed1c1781ab1bff88bd5bcfd5a7a43813c705c5a676183e48cd34"
+  },
+  "id": "hl59YCZ6y7KUU6uc",
+  "tags": []
+}

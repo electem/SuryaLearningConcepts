@@ -1,0 +1,155 @@
+{
+  "name": "DB-relation-one-many",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "add-teacher",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -480,
+        -16
+      ],
+      "id": "79f73c43-e4e9-46c2-81e5-ccbb33dd4001",
+      "name": "Webhook",
+      "webhookId": "4cddb45c-5f20-4574-9de4-c9e09a648113"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO teachers (name, department) VALUES ($1,$2) RETURNING id, name, department;",
+        "options": {
+          "queryReplacement": "=[\"{{ $json.body.name }}\", \"{{ $json.body.department }}\"]"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -272,
+        -16
+      ],
+      "id": "79ac7344-67ac-424b-8701-d9f183c9b738",
+      "name": "Postgres - Insert Teacher",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO courses (teacher_id, course_name, credits) VALUES ($1,$2,$3) RETURNING *;",
+        "options": {
+          "queryReplacement": "=[\"{{ $json.teacher_id }}\", \"{{ $json.course_name }}\", \"{{ $json.credits }}\"]"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        144,
+        -16
+      ],
+      "id": "a6ec98ba-6aff-47a5-853f-bc00e3ccc14a",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ success: true, data: $json }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        352,
+        -16
+      ],
+      "id": "24ce4f4f-5743-4a70-b537-3ac52e6bcd18",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const teacherId = $input.first().json.id;\nconst courses = $('Webhook').first().json.body.courses;\nreturn courses.map(c => ({\n  json: {\n    teacher_id: teacherId,\n    course_name: c.course_name,\n    credits: c.credits\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -16
+      ],
+      "id": "51046082-2e18-4a0c-9fd2-eca8f2826083",
+      "name": "Explode Courses"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Insert Teacher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Insert Teacher": {
+      "main": [
+        [
+          {
+            "node": "Explode Courses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explode Courses": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8bc4d04f-0610-4f2b-a5f9-611b2d6c99c6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49e166b41ceeed1c1781ab1bff88bd5bcfd5a7a43813c705c5a676183e48cd34"
+  },
+  "id": "ONaQ4ZAoLQjyAup0",
+  "tags": []
+}

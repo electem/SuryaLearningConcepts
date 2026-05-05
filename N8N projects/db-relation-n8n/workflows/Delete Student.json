@@ -1,0 +1,99 @@
+{
+  "name": "Delete Student",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "delete-student",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        0
+      ],
+      "id": "3ed229c0-3f64-439d-a976-b848d911ebd0",
+      "name": "Webhook",
+      "webhookId": "5c19dff8-a386-43ab-ae57-d327c5bdf7a4"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM students WHERE id=$1 RETURNING id;",
+        "options": {
+          "queryReplacement": "={{ $json.body.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "c6dcdc5d-27f9-4903-ae1b-512d8da59a9b",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ success: true, message: \"Student deleted\" }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        48,
+        0
+      ],
+      "id": "d5a13202-8737-444f-8ba4-eb39bb7dbc83",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5fe3c9cc-b448-4358-9339-c36681bd7a65",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49e166b41ceeed1c1781ab1bff88bd5bcfd5a7a43813c705c5a676183e48cd34"
+  },
+  "id": "i1QkY1TGsAooAaK9",
+  "tags": []
+}

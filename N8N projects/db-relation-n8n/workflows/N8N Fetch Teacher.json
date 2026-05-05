@@ -1,0 +1,120 @@
+{
+  "name": "N8N Fetch Teacher",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "get-teacher",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        -16
+      ],
+      "id": "8b79609e-9ec8-4abf-88c4-20c6250f54f7",
+      "name": "Webhook",
+      "webhookId": "77afe647-c1cc-4d84-a618-70d8222fa248"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT t.id, t.name, t.department,\n       c.id as course_id, c.course_name, c.credits\nFROM teachers t\nLEFT JOIN courses c ON c.teacher_id = t.id\nWHERE t.id = $1;",
+        "options": {
+          "queryReplacement": "={{ $json.query.teacher_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -32,
+        -16
+      ],
+      "id": "586d069e-dbae-441d-851b-57189e1e2eb1",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        384,
+        -16
+      ],
+      "id": "2d951055-f3cf-48d9-a0f0-8963d35b93ff",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nreturn [{ json: { success: true, data: rows } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -16
+      ],
+      "id": "64f1e6e1-02ea-4226-9032-fe838d5e322a",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9d7efcb6-21df-4f02-a979-aef506c1f236",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49e166b41ceeed1c1781ab1bff88bd5bcfd5a7a43813c705c5a676183e48cd34"
+  },
+  "id": "waweJPNLYv4X1RAP",
+  "tags": []
+}

@@ -1,0 +1,96 @@
+{
+  "name": "N8N Fetch Student",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "get-student",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -336,
+        -16
+      ],
+      "id": "ab94267a-5eac-433b-9a31-2c2d9464c2c1",
+      "name": "Webhook",
+      "webhookId": "a77c945d-2fa2-40af-95c3-ad14903bed94"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.id, s.name, s.email, \n       sp.phone, sp.address, sp.dob\nFROM students s\nLEFT JOIN student_profiles sp ON sp.student_id = s.id\nWHERE s.id = $1;",
+        "options": {
+          "queryReplacement": "={{ $json.query.student_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "1066d71e-44c2-422a-a8c9-698c70dd758c",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ success: true, data: $json }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        80,
+        -16
+      ],
+      "id": "ed2e8904-d053-46fc-9b71-f599aec60b56",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ed8d3926-f00f-4152-952e-8a50d810a9a5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49e166b41ceeed1c1781ab1bff88bd5bcfd5a7a43813c705c5a676183e48cd34"
+  },
+  "id": "HYMTvdeGyMJoRofC",
+  "tags": []
+}

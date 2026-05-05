@@ -1,0 +1,165 @@
+{
+  "name": "Register Student v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "register-student",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -416,
+        -16
+      ],
+      "id": "4dece926-d15a-4bd9-99da-64b5aea757e4",
+      "name": "Webhook",
+      "webhookId": "6c46ec04-e897-435e-b6b0-ec14374b21eb"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO student_profiles (student_id, phone, address, dob) VALUES ($1,$2,$3,$4) RETURNING *;",
+        "options": {
+          "queryReplacement": "={{ [$('Postgres - Insert Student').item.json.id, $('Webhook').item.json.body.phone, $('Webhook').item.json.body.address, $('Webhook').item.json.body.dob] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "d7dc2321-fd37-4722-a6cd-b703444f70f6",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO students (name, email) VALUES ($1, $2) RETURNING id, name, email;",
+        "options": {
+          "queryReplacement": "=[\"{{ $json.body.name }}\", \"{{ $json.body.email }}\"]"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -208,
+        -16
+      ],
+      "id": "f75edc1b-1329-431b-bf4a-6b3561afc6b6",
+      "name": "Postgres - Insert Student",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO email_notifications \n(student_id, student_name, student_email, phone, address, dob, status)\nVALUES ($1, $2, $3, $4, $5, $6, 'pending')\nRETURNING *;",
+        "options": {
+          "queryReplacement": "={{ [$('Postgres - Insert Student').item.json.id, $('Postgres - Insert Student').item.json.name, $('Postgres - Insert Student').item.json.email, $('Webhook').item.json.body.phone, $('Webhook').item.json.body.address, $('Webhook').item.json.body.dob] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        -16
+      ],
+      "id": "9af69a35-a19b-45e8-b41a-6d82295b63ab",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ success: true, message: \"Student registered. Email notification queued.\" }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        -16
+      ],
+      "id": "8b0e3500-d40a-4f99-a2c8-bf49866e152b",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Insert Student",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Insert Student": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "155729da-bdc5-406b-988b-06e41708802d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49e166b41ceeed1c1781ab1bff88bd5bcfd5a7a43813c705c5a676183e48cd34"
+  },
+  "id": "9vVhgdheniHjsbm5",
+  "tags": []
+}

@@ -1,0 +1,136 @@
+{
+  "name": "Update Student",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "update-student",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        0
+      ],
+      "id": "28b024ff-5ec5-4269-af3a-cc4f42ee319d",
+      "name": "Webhook",
+      "webhookId": "6ed0a5b7-6ba9-4419-bfc5-0b6716da6a80"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE students SET name=$1, email=$2 WHERE id=$3 RETURNING *;",
+        "options": {
+          "queryReplacement": "={{ [$('Webhook').item.json.body.name, $('Webhook').item.json.body.email, $('Webhook').item.json.body.id] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "6fe8e4cd-5bdc-4bb4-a02e-2485a8be57e8",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE student_profiles SET phone=$1, address=$2, dob=$3 WHERE student_id=$4 RETURNING *;",
+        "options": {
+          "queryReplacement": "={{ [$('Webhook').item.json.body.phone, $('Webhook').item.json.body.address, $('Webhook').item.json.body.dob, $('Webhook').item.json.body.id] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        48,
+        0
+      ],
+      "id": "9b186186-6734-48ac-97a5-69d674ed0942",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify({ success: true, message: \"Student updated\" }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        256,
+        0
+      ],
+      "id": "fa8fb3c2-3eb0-480a-8be9-57413e6eee74",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "40efae7a-092b-4f69-9dae-c8e80f654f84",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49e166b41ceeed1c1781ab1bff88bd5bcfd5a7a43813c705c5a676183e48cd34"
+  },
+  "id": "sh1ndbsdqyR3nsML",
+  "tags": []
+}

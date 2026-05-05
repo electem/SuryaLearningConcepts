@@ -1,0 +1,236 @@
+{
+  "name": "Email Notification Cron",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -832,
+        -16
+      ],
+      "id": "90095a09-68f5-4d56-b862-a947520750f1",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM email_notifications \nWHERE status = 'pending' \nORDER BY created_at ASC \nLIMIT 10;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -640,
+        -16
+      ],
+      "id": "f80ff718-666a-4a93-a22e-549aa322962b",
+      "name": "Postgres - Get Pending",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e2511fea-cd75-4911-825d-5c07ecc28a11",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -448,
+        -16
+      ],
+      "id": "e61ebaef-9f5f-428f-814d-957ad93bf538",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fromEmail": "rohitbeuria7846@gmail.com",
+        "toEmail": "={{ $('Code - Split Items').item.json.student_email  }}",
+        "subject": "=Welcome to Surya International School, {{ $('Code - Split Items').item.json.student_name }}!",
+        "html": "=<div style=\"font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;\">\n\n  <h2 style=\"color: #4f46e5;\">Welcome to Surya International School! 🎓</h2>\n  \n  <p>Hi <strong>{{ $('Code - Split Items').item.json.student_name }}</strong>,</p>\n  \n  <p>Thank you for registering with us! We are excited to have you on board.</p>\n  \n  <h3 style=\"color: #333;\">Your Profile Details:</h3>\n  <table style=\"width:100%; border-collapse: collapse;\">\n    <tr style=\"background:#f9f9f9;\">\n      <td style=\"padding:8px; border:1px solid #ddd;\"><strong>Name</strong></td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">{{ $('Code - Split Items').item.json.student_name }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding:8px; border:1px solid #ddd;\"><strong>Email</strong></td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">{{ $('Code - Split Items').item.json.student_email }}</td>\n    </tr>\n    <tr style=\"background:#f9f9f9;\">\n      <td style=\"padding:8px; border:1px solid #ddd;\"><strong>Phone</strong></td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">{{ $('Code - Split Items').item.json.phone }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding:8px; border:1px solid #ddd;\"><strong>Address</strong></td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">{{ $('Code - Split Items').item.json.address }}</td>\n    </tr>\n    <tr style=\"background:#f9f9f9;\">\n      <td style=\"padding:8px; border:1px solid #ddd;\"><strong>Date of Birth</strong></td>\n      <td style=\"padding:8px; border:1px solid #ddd;\">{{ $('Code - Split Items').item.json.dob ? $('Code - Split Items').item.json.dob.split('T')[0] : '' }}</td>\n    </tr>\n  </table>\n\n  <h3 style=\"color: #333; margin-top: 24px;\">Explore Our Courses 📚</h3>\n  <p>We have a wide range of courses available for you. Log in to your student portal to explore and enroll in courses that interest you.</p>\n\n  <div style=\"margin-top: 24px; padding: 16px; background: #f0f0ff; border-radius: 8px;\">\n    <p style=\"margin:0; color:#4f46e5;\"><strong>Need help?</strong> Reply to this email and we will get back to you shortly.</p>\n  </div>\n\n  <p style=\"margin-top: 24px; color: #999; font-size: 12px;\">This is an automated message. Please do not reply directly to this email.</p>\n\n</div>",
+        "options": {
+          "attachments": "=data"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        192,
+        -128
+      ],
+      "id": "4d34220a-e9ca-446b-83ba-7ecfbef18375",
+      "name": "Send an Email",
+      "webhookId": "3377dc2d-f7fc-4703-8bb0-5cf522db7bb3",
+      "credentials": {
+        "smtp": {
+          "id": "kE9ZcsAI88UeNLLm",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE email_notifications \nSET status = 'sent', sent_at = NOW() \nWHERE id = $1 \nRETURNING *;",
+        "options": {
+          "queryReplacement": "={{ $('Code - Split Items').item.json.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        400,
+        -128
+      ],
+      "id": "48ab2400-22e0-45f5-b9f8-c8f7e8244ee8",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "xopDcLgDDyNTI1hT",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => ({ json: item.json }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -128
+      ],
+      "id": "f900ef86-0b21-4a32-a4d0-2e13ace72eb4",
+      "name": "Code - Split Items"
+    },
+    {
+      "parameters": {
+        "fileSelector": "C:\\Users\\DELL\\.n8n-files\\coding_test_questions.pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        -128
+      ],
+      "id": "6897c808-7d96-452b-95ed-6a90c1863394",
+      "name": "Read PDF"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Get Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Get Pending": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code - Split Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an Email": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Split Items": {
+      "main": [
+        [
+          {
+            "node": "Read PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read PDF": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d263feb8-d116-4d8e-a23a-20d5088afb39",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "49e166b41ceeed1c1781ab1bff88bd5bcfd5a7a43813c705c5a676183e48cd34"
+  },
+  "id": "OwT98lJXnVe0KuDf",
+  "tags": []
+}
